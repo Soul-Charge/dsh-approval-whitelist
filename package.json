@@ -1,0 +1,41 @@
+{
+  "name": "dsh-approval-whitelist",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DSH approval whitelist: pre-approved trusted directories stop prompting, on top of the sandbox escalation approval seam. Independent of dsh-auto-mode (works after auto-mode is deleted).",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "node test/run-all.mjs",
+    "verify": "node tools/verify-live.mjs"
+  },
+  "engines": {
+    "dsh": ">=0.0.1",
+    "node": ">=20.0.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-api-remotes"
+      ]
+    }
+  },
+  "files": [
+    "src",
+    "lib",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,49 @@
+# dsh-approval-whitelist bundle layer: mount the plugin into the composition.
+#
+# Mount order matters: this bundle must be listed AFTER @nanmicoder/dsh-auto-mode
+# in the profile's dsh.profile.bundles, because both plugins prepend an
+# approval/request listener and the later registration runs first (spike report
+# section 4.2). If auto-mode is absent the plugin still works unchanged.
+- insert:
+    - id: approval-whitelist
+      name: dsh-approval-whitelist
+      config:
+        enabled: true
+        # Append one JSON line per whitelist judgement to
+        # ~/.dsh/approval-whitelist.audit.log
+        audit: true
+        guard:
+          enabled: true
+          # false (default here): DSH_HOME stays writable through an approval
+          # escalation, which is what this workspace's AGENTS.md relies on.
+          # true: mirror auto-mode's guard and hard-deny ~/.dsh writes.
+          protectDshHome: false
+        # Optional AI approval layer (off by default; with it off the plugin
+        # behaves exactly as before). When enabled, an escalation the whitelist
+        # refused is put to this model as structured facts, and anything it
+        # answers other than "ask" is filtered through the server-side safety
+        # rules below before anything is granted.
+        aiReview:
+          enabled: true             # ON: user enabled it on 2026-10-04
+          provider: ''              # empty = follow the session's own model
+          model: ''                 # empty = follow the session's own model
+          reasoningEffort: low      # approval is a classification, not a reasoning task;
+                                    # 'high'/'max' burn thousands of reasoning tokens and
+                                    # blow the 8s timeout. Leave blank to follow the session.
+          timeoutMs: 8000            # over this, the answer is "ask"
+          maxTokens: 16384         # measured ~8k reasoning tokens per answer on this machine
+          temperature: 0
+          tools:                     # only these tools are ever put to the model
+            - bash
+            - pwsh
+            # write/edit 的目标路径是确定参数，比 bash 更安全；纳入 AI 审批以消除
+            # "write/edit 提权直接绕过 AI 弹给人"的盲区（原本只有 bash/pwsh 会进 AI）。
+            - write
+            - edit
+            - apply_patch
+            - str_replace_editor
+          maxSessionRules: 3         # AI-created rules per session (then allow-once only)
+          minScopeDepth: 3           # a scope root needs at least this many path components
+          # NOT configurable, on purpose: an AI-created rule is always
+          #   level = code   (a trust declaration must never be auto-upgraded)
+          #   scope = session (an AI may never widen the whitelist globally)

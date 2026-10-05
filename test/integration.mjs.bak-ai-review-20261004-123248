@@ -1,0 +1,178 @@
+// SPDX-License-Identifier: MIT
+// Integration test: compose the REAL cordis runtime, dsh-tools pipeline,
+// dsh-user-approval service and this plugin, then drive actual escalations.
+// No auto-mode is composed anywhere: this is the "auto-mode deleted" deployment.
+// All state (rule store, audit log, scratch dirs) lives under the harness scratch root.
+import fs from 'node:fs'
+import path from 'node:path'
+import { Context } from '@deepseek-ai/cordis'
+import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
+import ToolRuntime, { defineTool } from '@deepseek-ai/dsh-tools'
+import ApprovalService from '@deepseek-ai/dsh-user-approval'
+import Commands from '@deepseek-ai/dsh-commands'
+import { Session, SessionId } from '@deepseek-ai/dsh-session'
+import { ToolCallId } from '@deepseek-ai/dsh-llm'
+import * as whitelist from '../src/index.js'
+import { assert, assertEqual, scratch, summary, test } from './harness.mjs'
+
+const tmp = scratch('integration')
+const trusted = path.join(tmp, 'trusted')
+const ws = path.join(tmp, 'ws')
+const outside = path.join(tmp, 'outside')
+for (const d of [trusted, ws, outside]) fs.mkdirSync(d, { recursive: true })
+const storePath = path.join(tmp, 'integration-rules.json')
+const auditPath = path.join(tmp, 'integration-audit.log')
+
+async function compose(level) {
+  fs.writeFileSync(storePath, JSON.stringify({
+    version: 1,
+    nextId: 2,
+    rules: [{ id: 'r1', path: trusted, level: level, scope: 'global', tools: ['write', 'edit', 'bash'], createdAt: 1, expiresAt: null }],
+  }, null, 2))
+  const context = new Context()
+  context.provide('agents', { get: () => undefined })
+  const session = new Session(SessionId('session-integration'), undefined, { version: 3, id: SessionId('session-integration'), createdAt: 1, isSeeded: false, cwd: ws })
+  session.append('turn/start', {})
+  session.append('permission/preset', { preset: 'workspace-write' })
+  const agent = { options: { provider: 'mock', model: 'mock' }, session: session }
+
+  await context.plugin(SystemPrompt).await()
+  await context.plugin(ToolRuntime).await()
+  await context.plugin(ApprovalService, { policy: 'ask' }).await()
+  await context.plugin(Commands).await()
+  await context.plugin(whitelist, { storePath: storePath, auditPath: auditPath, guard: { enabled: true, protectDshHome: false } }).await()
+
+  const state = { prompts: 0, bodies: 0 }
+  const escalationTool = (name) => defineTool({
+    name: name,
+    description: 'integration probe: records the call and asks for a sandbox escalation',
+    parameters: { command: { type: 'string' }, file_path: { type: 'string' }, sandbox_permissions: { type: 'string' }, justification: { type: 'string' } },
+    output: { schema: { type: 'object', additionalProperties: false, properties: { ok: { type: 'boolean', required: true } } }, render: () => [{ type: 'text', text: 'ok' }] },
+    async execute(args, exec) {
+      state.bodies += 1
+      if (args.sandbox_permissions !== undefined) {
+        const { approveEscalation } = await import('@deepseek-ai/dsh-sandbox')
+        await approveEscalation(
+          { requestedMode: args.sandbox_permissions, justification: args.justification || '', effectiveMode: 'workspace-write', subject: 'call' },
+          { approver: context.get('approval'), agent: exec.agent, callId: exec.callId, toolName: name, signal: exec.signal },
+        )
+      }
+      return { ok: true }
+    },
+  })
+  context.tools.register(escalationTool('bash'))
+  context.tools.register(escalationTool('write'))
+  // Stands in for the UI / remote-gate answerer chain.
+  context.on('approval/request', (request, next) => { state.prompts += 1; return next() }, { prepend: false })
+
+  const run = async (id, name, args) => context.tools.execute({ callId: ToolCallId(id), name: name, arguments: args, agent: agent, signal: new AbortController().signal })
+  return { context, agent, run, state, dispose: async () => { await context.fiber.dispose() } }
+}
+
+function isError(result) {
+  if (result === undefined || result === null) return true
+  if (result.isError === true) return true
+  const content = Array.isArray(result.content) ? result.content : []
+  return content.some((block) => String(block.text || '').startsWith('Error:'))
+}
+
+console.log('== integration (real cordis + dsh-tools + dsh-user-approval, no auto-mode) ==')
+await test('a whitelisted escalation is granted without reaching the UI', async () => {
+  const scene = await compose('code')
+  try {
+    const result = await scene.run('c1', 'bash', { command: 'echo hi > ' + trusted + '/note.txt', sandbox_permissions: 'danger-full-access', justification: 'integration' })
+    assertEqual(isError(result), false, 'the call should succeed')
+    assertEqual(scene.state.prompts, 0, 'the UI answerer must not be reached')
+    assertEqual(scene.state.bodies, 1, 'the tool body must run')
+  } finally { await scene.dispose() }
+})
+
+await test('an escalation outside the trusted root still reaches the UI', async () => {
+  const scene = await compose('code')
+  try {
+    const result = await scene.run('c2', 'bash', { command: 'echo hi > ' + outside + '/note.txt', sandbox_permissions: 'danger-full-access', justification: 'integration' })
+    assertEqual(isError(result), true, 'with no answerer the escalation must fail closed')
+    assertEqual(scene.state.prompts, 1, 'the UI answerer must be reached exactly once')
+  } finally { await scene.dispose() }
+})
+
+await test('level code refuses to run a program, level data grants it', async () => {
+  const strict = await compose('code')
+  try {
+    const result = await strict.run('c3', 'bash', { command: 'python3 ' + ws + '/script.py', sandbox_permissions: 'danger-full-access', justification: 'integration' })
+    assertEqual(isError(result), true)
+    assertEqual(strict.state.prompts, 1)
+  } finally { await strict.dispose() }
+  const loose = await compose('data')
+  try {
+    const result = await loose.run('c4', 'bash', { command: 'python3 ' + ws + '/script.py', sandbox_permissions: 'danger-full-access', justification: 'integration' })
+    assertEqual(isError(result), false)
+    assertEqual(loose.state.prompts, 0)
+  } finally { await loose.dispose() }
+})
+
+await test('an unregistered callId is never granted', async () => {
+  const scene = await compose('data')
+  try {
+    const outcome = await scene.context.waterfall(scene.context, 'approval/request', {
+      agent: scene.agent, toolName: 'bash', callId: ToolCallId('never-registered'), reason: 'escalate sandbox to danger-full-access: 插件源码在工作区之外，需要写入权限',
+    }, async () => 'unavailable')
+    assertEqual(outcome, 'unavailable')
+    assertEqual(scene.state.prompts, 1)
+  } finally { await scene.dispose() }
+})
+
+await test('the self-held guard blocks privilege escalation before the body runs', async () => {
+  const scene = await compose('data')
+  try {
+    const result = await scene.run('c5', 'bash', { command: 'sudo cp ' + trusted + '/a /tmp/b', sandbox_permissions: 'danger-full-access', justification: 'integration' })
+    assertEqual(isError(result), true)
+    assertEqual(scene.state.bodies, 0, 'the guard must stop the call before dispatch')
+    assertEqual(scene.state.prompts, 0, 'nothing should even ask the user')
+  } finally { await scene.dispose() }
+})
+
+await test('the audit log records the decision with the documented fields', async () => {
+  const scene = await compose('code')
+  try {
+    await scene.run('c6', 'bash', { command: 'echo hi > ' + trusted + '/audit.txt', sandbox_permissions: 'danger-full-access', justification: 'integration' })
+    const lines = fs.readFileSync(auditPath, 'utf8').trim().split('\n').map((line) => JSON.parse(line))
+    const allowed = lines.filter((line) => line.result === 'allowed-once')
+    assert(allowed.length >= 1, 'an auto-grant must be audited')
+    const entry = allowed[allowed.length - 1]
+    assertEqual(Object.keys(entry).sort(), ['callId', 'code', 'commitHash', 'level', 'note', 'result', 'ruleId', 'sessionId', 'target', 'tool', 'ts'].sort())
+    assertEqual(entry.ruleId, 'r1')
+    assertEqual(entry.level, 'code')
+    assertEqual(entry.tool, 'bash')
+    assert(entry.target.indexOf(trusted + '/audit.txt') >= 0, 'the target must be recorded')
+    assert(String(entry.commitHash).length === 12, 'commitHash must be the build fingerprint')
+  } finally { await scene.dispose() }
+})
+
+await test('the /permit command is registered and writes a rule', async () => {
+  const scene = await compose('code')
+  try {
+    const names = scene.context.commands.list(scene.agent).map((descriptor) => descriptor.name)
+    assert(names.indexOf('permit') >= 0, '/permit must be discoverable, saw: ' + names.join(','))
+    const execution = await scene.context.commands.execute(scene.agent, '/permit add ' + outside + ' data global', [], new AbortController().signal)
+    assertEqual(execution.result.kind, 'success')
+    assert(String(execution.result.text).indexOf('level=data') >= 0, 'the level must be reported: ' + execution.result.text)
+    const stored = JSON.parse(fs.readFileSync(storePath, 'utf8'))
+    assertEqual(stored.rules.length, 2)
+    assertEqual(stored.rules[1].path, outside)
+    assertEqual(stored.rules[1].level, 'data')
+    assertEqual(stored.rules[1].scope, 'global')
+    const listing = await scene.context.commands.execute(scene.agent, '/permit list', [], new AbortController().signal)
+    assert(String(listing.result.text).indexOf(outside) >= 0, 'list must show the new rule')
+    const removal = await scene.context.commands.execute(scene.agent, '/permit rm r1', [], new AbortController().signal)
+    assertEqual(removal.result.kind, 'success')
+    assertEqual(JSON.parse(fs.readFileSync(storePath, 'utf8')).rules.length, 1)
+    const audited = fs.readFileSync(auditPath, 'utf8').trim().split('\n').map((line) => JSON.parse(line))
+    const added = audited.filter((line) => line.result === 'rule-added')
+    assert(added.length >= 1, 'widening the whitelist must be audited')
+    assertEqual(added[added.length - 1].target, [outside])
+    assert(audited.some((line) => line.result === 'rule-removed' && line.ruleId === 'r1'), 'removal must be audited')
+  } finally { await scene.dispose() }
+})
+
+summary('integration')

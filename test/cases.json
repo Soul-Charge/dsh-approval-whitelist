@@ -1,0 +1,307 @@
+{
+  "source": "session.v3.jsonl.zstd",
+  "sessionCwd": "/mnt/d/myproject",
+  "extractedFrom": "DSH session log (real escalation history)",
+  "note": "Credential-looking strings redacted. arguments.command/file_path are the real call arguments.",
+  "cases": [
+    {
+      "seq": 299,
+      "tool": "bash",
+      "callId": "call_00_wgrqkiBTjqViUj6nH5kd6464:ptc:1",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 插件仓库 /home/user/myproject/data/plugins/... 在工作区之外，需写入权限才能执行 git add/commit 以建立回滚点（用户已在 §7.1 选择方案 a）。",
+      "arguments": {
+        "command": "cd /home/user/myproject/data/plugins/sample_plugin && git add -A && git commit -q -m \"feat: 主管道派发模式下的人设/工具策略与噪声折叠（既有未提交工作）\\n\\n- pipeline_dispatch: 派发模式与钩子优先级、director note、工具策略\\n- judge_utils/plugin_config/_conf_schema: 判定输出解析与配置项扩充\\n- reply_tracker/runtime_state: 冷却延后与状态字段\\n- tests: 新增 pipeline hooks / noise placeholder，扩充 dispatch 与 config 用例\\n\\n本次提交仅归档工作区既有改动，不含 self_reply 自主回复开关（/reply）改动。\" && git log --oneline -2 && echo \"--- STATUS ---\" && git status --short && echo \"(clean if empty)\"",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 310,
+      "tool": "bash",
+      "callId": "call_00_QcVlzQadkMBCX6RAhOJD7178:ptc:2",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 修正刚建立的回滚点提交信息（插件仓库在工作区之外，需写入权限）。",
+      "arguments": {
+        "command": "cd /home/user/myproject/data/plugins/sample_plugin && git commit -q --amend -F /mnt/d/myproject/temp/20260922-commit-msg.txt && git log -1 --format='%H%n%B'",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 375,
+      "tool": "bash",
+      "callId": "call_00_Vit5mPFlKFLnBB76wGDv6674:ptc:1",
+      "outcome": "cancelled",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 插件源码 /home/user/myproject/data/plugins/... 在工作区之外，需写入权限才能落盘本次 /reply 开关改动。",
+      "arguments": {
+        "command": "python3 /mnt/d/myproject/tasks/self-reply-private-switch/apply_patch.py",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 395,
+      "tool": "bash",
+      "callId": "call_00_I5NiydGnifr8ybXoD6Ne7873:ptc:1",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 测试提权审批是否可达（写入工作区临时文件），用于判断后续插件目录写入能否落地。",
+      "arguments": {
+        "command": "echo PROBE; touch /mnt/d/myproject/temp/20260922-probe.txt && echo TOUCH_OK",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 404,
+      "tool": "bash",
+      "callId": "call_00_BmY3h8oBNGB8qAgRwuAR0226:ptc:1",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 插件源码 /home/user/myproject/data/plugins/... 在工作区之外，需写入权限才能落盘本次 /reply 开关改动。",
+      "arguments": {
+        "command": "python3 /mnt/d/myproject/tasks/self-reply-private-switch/apply_patch.py",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 424,
+      "tool": "bash",
+      "callId": "call_00_ATVfOyytTWHGF6sNIVWx5162:ptc:2",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 插件源码在工作区之外，需写入权限修正一处空行并做只读语法校验。",
+      "arguments": {
+        "command": "python3 /mnt/d/myproject/tasks/self-reply-private-switch/fix_spacing.py && python3 -c \"\nimport ast,sys\nfor f in ['main.py','tests/conftest.py','tests/test_main_pause_switch.py']:\n    ast.parse(open('/home/user/myproject/data/plugins/sample_plugin/'+f,encoding='utf-8').read())\n    print('AST_OK', f)\n\"",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 610,
+      "tool": "bash",
+      "callId": "call_00_4kBUBSRDUkoy1UcyDB5f7945:ptc:1",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 插件源码 /home/user/myproject/data/plugins/sample_plugin 在工作区之外，需写入权限以修正本次 /reply 改动的守卫顺序与配套测试白名单。",
+      "arguments": {
+        "command": "python3 /mnt/d/myproject/tasks/self-reply-private-switch/fix_all.py",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 626,
+      "tool": "edit",
+      "callId": "call_00_MFGjSPDI9Ob8u9gQqcka4221:ptc:1",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 修正插件测试文件 tests/test_main_pause_switch.py 的 FakeEvent：message 为空导致历史行不含正文，使「关闭期间仍写入 session_chats」用例误判失败，需补一个 Plain 组件。",
+      "arguments": {
+        "file_path": "/home/user/myproject/data/plugins/sample_plugin/tests/test_main_pause_switch.py",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 642,
+      "tool": "edit",
+      "callId": "call_00_ET_x3HNslSMDhVL0cjqvHR06619:ptc:1",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 修正插件测试文件 tests/test_main_pause_switch.py 的 FakeEvent：message 为空导致历史行不含正文，使「关闭期间仍写入 session_chats」用例误判失败，需补一个 Plain 组件。",
+      "arguments": {
+        "file_path": "/home/user/myproject/data/plugins/sample_plugin/tests/test_main_pause_switch.py",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 658,
+      "tool": "edit",
+      "callId": "call_00_iG8CuuFZkuiJbGSJ2GVg3324:ptc:1",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 在插件测试文件 tests/test_main_pause_switch.py 顶部补 Plain 组件的 import，供 FakeEvent 构造历史行正文使用。",
+      "arguments": {
+        "file_path": "/home/user/myproject/data/plugins/sample_plugin/tests/test_main_pause_switch.py",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 684,
+      "tool": "edit",
+      "callId": "call_00_ET_eVDj19hB23Wwgxnz90fV4288:ptc:1",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 更新插件配置 schema _conf_schema.json 中 allowed_origins 的 hint 文案为 v3 新语义（留空=插件关闭），使 WebUI 上能正确提示。",
+      "arguments": {
+        "file_path": "/home/user/myproject/data/plugins/sample_plugin/_conf_schema.json",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 709,
+      "tool": "bash",
+      "callId": "call_00_vTbxZNnUwAHdYoYn0TMk3122:ptc:2",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 在插件仓库 /home/user/myproject/data/plugins/sample_plugin（工作区之外）提交本次 /reply 开关改动，作为独立回滚点。",
+      "arguments": {
+        "command": "cd /home/user/myproject/data/plugins/sample_plugin && git add -A && git commit -q -F /mnt/d/myproject/tasks/self-reply-private-switch/commit-msg-v2.txt && git log --oneline -3 && echo \"--- STATUS ---\" && git status --short && echo \"(clean if empty)\"",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 853,
+      "tool": "bash",
+      "callId": "call_00_ET_0O60j50jF9sNgJOZbgaN2556:ptc:1",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 插件源码 /home/user/myproject/data/plugins/sample_plugin/main.py 在工作区之外，需写入权限以加入 /reply off <群号> 按群开关与 stat 群名显示。",
+      "arguments": {
+        "command": "python3 /mnt/d/myproject/tasks/self-reply-private-switch/apply_patch2.py",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 871,
+      "tool": "bash",
+      "callId": "call_00_ET_pSjOGotr4KKJoWcjFimF6527:ptc:1",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 插件源码 /home/user/myproject/data/plugins/sample_plugin/main.py 在工作区之外，需写入权限以加入 /reply off <群号> 按群开关与 stat 群名显示。",
+      "arguments": {
+        "command": "python3 /mnt/d/myproject/tasks/self-reply-private-switch/apply_patch2.py",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 912,
+      "tool": "bash",
+      "callId": "call_00_ET_HTUmjH2ZLB31FQJOh79t9109:ptc:1",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 插件源码 /home/user/myproject/data/plugins/sample_plugin/main.py 在工作区之外，需写入权限以加入 /reply off <群号> 按群开关与 stat 群名显示。",
+      "arguments": {
+        "command": "python3 /mnt/d/myproject/tasks/self-reply-private-switch/apply_patch2.py",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 923,
+      "tool": "bash",
+      "callId": "call_00_ET_2Q47CJre0kSV4Zjli54C2256:ptc:2",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 插件源码 /home/user/myproject/data/plugins/sample_plugin/main.py 在工作区之外，需写入权限以加入 /reply off <群号> 按群开关与 stat 群名显示。",
+      "arguments": {
+        "command": "python3 /mnt/d/myproject/tasks/self-reply-private-switch/apply_patch2.py",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 941,
+      "tool": "bash",
+      "callId": "call_00_b6zFY9tVjBQWd9yszLZj7025:ptc:2",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 插件源码 /home/user/myproject/data/plugins/sample_plugin/main.py 在工作区之外，需写入权限以替换 stat 渲染与 reply_command 实现。",
+      "arguments": {
+        "command": "python3 /mnt/d/myproject/tasks/self-reply-private-switch/apply_stat.py",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 961,
+      "tool": "bash",
+      "callId": "call_00_3dOTBGu4eMHcoN6QfK765543:ptc:2",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 修复插件 main.py 与任务目录片段中一处损坏的字符串（return \\n.join 缺引号），使语法正确。",
+      "arguments": {
+        "command": "python3 /mnt/d/myproject/tasks/self-reply-private-switch/fix_join.py",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 993,
+      "tool": "bash",
+      "callId": "call_00_ET_iWX5asNWkljqH9R6hOGK1855:ptc:2",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 把新增测试 tests/test_main_pause_per_group.py 复制到工作区之外的插件目录。",
+      "arguments": {
+        "command": "python3 /mnt/d/myproject/tasks/self-reply-private-switch/install_test.py",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 1023,
+      "tool": "edit",
+      "callId": "call_00_ET_3mEVCQpM1ajB9PnfKlHe8404:ptc:1",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 更新插件测试 tests/test_main_pause_switch.py 中一条 KV 载荷断言：新增按群开关后载荷多了 paused_origins 键。",
+      "arguments": {
+        "file_path": "/home/user/myproject/data/plugins/sample_plugin/tests/test_main_pause_switch.py",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 1027,
+      "tool": "edit",
+      "callId": "call_00_ET_3mEVCQpM1ajB9PnfKlHe8404:ptc:2",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 更新插件测试 tests/test_main_pause_switch.py 中一条已过时的用例：带群号参数现在按群生效，不再被忽略。",
+      "arguments": {
+        "file_path": "/home/user/myproject/data/plugins/sample_plugin/tests/test_main_pause_switch.py",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 1038,
+      "tool": "bash",
+      "callId": "call_00_ET_vA2yKHaZvBKdSD8hC4hU5214:ptc:2",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 修正新增测试的顺序问题并复制到工作区之外的插件 tests 目录。",
+      "arguments": {
+        "command": "python3 /mnt/d/myproject/tasks/self-reply-private-switch/fix_newtest.py",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    },
+    {
+      "seq": 1070,
+      "tool": "bash",
+      "callId": "call_00_sWumXma2mBCWkg8ZBLEg2626:ptc:2",
+      "outcome": "allowed-once",
+      "escalation": true,
+      "reason": "escalate sandbox to danger-full-access: 在插件仓库（工作区之外）提交本次按群开关与 stat 群名显示的改动。",
+      "arguments": {
+        "command": "cd /home/user/myproject/data/plugins/sample_plugin && git add -A && git commit -q -F /mnt/d/myproject/tasks/self-reply-private-switch/commit-msg-v3.txt && git log --oneline -3 && echo \"--- STATUS ---\" && git status --short && echo \"(clean)\"",
+        "sandbox_permissions": "danger-full-access"
+      },
+      "resolved": true
+    }
+  ]
+}

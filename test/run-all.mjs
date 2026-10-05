@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: MIT
+// Run every suite in one process. Each suite prints its own summary and sets a
+// non-zero exit code on failure.
+const suites = ['unit', 'negative', 'replay', 'ai', 'settings', 'client', 'integration']
+for (const suite of suites) {
+  console.log('\n########## ' + suite + ' ##########')
+  await import('./' + suite + '.mjs')
+}
+console.log('\nAll suites executed. Exit code is non-zero if any assertion failed.')
